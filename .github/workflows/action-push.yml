@@ -1,5 +1,5 @@
 name: Push test images for E2E 
-on: [push]
+on: [push, pull_request]
 jobs:
   Push:
     runs-on: ubuntu-latest
