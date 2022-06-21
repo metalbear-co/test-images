@@ -1,38 +1,27 @@
-from os import getcwd, remove, getpid, kill
-from signal import SIGTERM
-import click
-from flask import Flask, request
-import logging
-import sys
+from flask import Flask
 
-log = logging.getLogger("werkzeug")
-log.disabled = True
-
-cli = sys.modules["flask.cli"]
-
-PORT=5432
-
-cli.show_server_banner = lambda *x: click.echo(f"Server listening on port {PORT}")
+PORT = 80
 
 app = Flask(__name__)
 
+
 @app.route("/", methods=["GET"])
-def get():    
+def get():
     return "OK - GET: Request completed\n"
 
 
 @app.route("/", methods=["POST"])
-def post():    
+def post():
     return "OK - POST: Request completed\n"
 
 
 @app.route("/", methods=["PUT"])
-def put():        
+def put():
     return "OK - PUT: Request completed\n"
 
 
 @app.route("/", methods=["DELETE"])
-def delete():        
+def delete():
     return "OK - DELETE: Request completed\n"
 
 
