@@ -22,12 +22,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
+      - name: Python - build and push
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: python
           file: python/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-pytest:latest
+      - name: Node - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: node
+          file: node/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-node:latest            
