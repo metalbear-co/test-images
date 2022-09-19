@@ -40,3 +40,13 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-node:latest            
+      - name: Node UDP Logger - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: node
+          file: node-udp-logger/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-node-udp-logger:latest
+
