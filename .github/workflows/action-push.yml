@@ -43,7 +43,7 @@ jobs:
       - name: Node UDP Logger - build and push
         uses: docker/build-push-action@v3
         with:
-          context: node
+          context: node-udp-logger
           file: node-udp-logger/Dockerfile
           platforms: linux/amd64
           push: true
