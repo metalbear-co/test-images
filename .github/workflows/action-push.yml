@@ -27,7 +27,7 @@ jobs:
         with:
           context: python
           file: python/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-pytest:latest
@@ -36,7 +36,7 @@ jobs:
         with:
           context: node
           file: node/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-node:latest            
@@ -45,7 +45,7 @@ jobs:
         with:
           context: node-udp-logger
           file: node-udp-logger/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-node-udp-logger:latest
