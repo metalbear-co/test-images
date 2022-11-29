@@ -49,4 +49,21 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-node-udp-logger:latest
-
+      - name: http-logger - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: http-logger
+          file: http-logger/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-http-logger:latest
+      - name: http-logger - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: http-log-requester
+          file: http-log-requester/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-http-log-requester:latest
