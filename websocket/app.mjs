@@ -1,3 +1,8 @@
+/**
+ * Websocket echo server.
+ *
+ * Replies with "remote {received data}".
+ */
 import { WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ port: 80 });
