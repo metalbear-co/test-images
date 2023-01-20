@@ -39,7 +39,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/metalbear-co/mirrord-node:latest            
+            ghcr.io/metalbear-co/mirrord-node:latest
       - name: Node UDP Logger - build and push
         uses: docker/build-push-action@v3
         with:
@@ -76,4 +76,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-tcp-echo:latest
-
+      - name: websocket - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: websocket
+          file: websocket/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-websocket:latest
