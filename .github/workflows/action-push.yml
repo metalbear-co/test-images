@@ -85,3 +85,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-websocket:latest
+      - name: unix-socket-server - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: unix-socket-server
+          file: unix-socket-server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-unix-socket-server:latest
