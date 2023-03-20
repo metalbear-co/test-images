@@ -1,10 +1,13 @@
-FROM --platform=$BUILDPLATFORM docker:dind as base
+FROM --platform=$BUILDPLATFORM rust:1.68-slim as base
 ARG TARGETARCH
 
-# Install Rust.
-RUN apk update && apk add --no-cache curl gcc musl-dev
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+# Install docker inside this container, for cross.
+RUN apt-get update
+RUN apt-get install -y curl
+RUN curl -fsSL https://get.docker.com -o get-docker.sh
+RUN sh get-docker.sh
+RUN dockerd
+
 
 # Install cross.
 ENV CROSS_CONTAINER_IN_CONTAINER=true
