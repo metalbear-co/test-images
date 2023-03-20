@@ -9,6 +9,10 @@ COPY platform.sh .
 RUN ./platform.sh
 
 COPY target .
+RUN pwd
+RUN ls
+RUN ls target
+RUN ls target/*/release
 RUN cp target/$(cat /.platform)/release/unix-socket-server .
 
 # Now copy only the binary into a new layer.
