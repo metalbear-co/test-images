@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Used in Docker build to set platform dependent variables
 

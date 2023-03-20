@@ -1,17 +1,29 @@
-FROM rust:1.68-slim as base
+FROM --platform=$BUILDPLATFORM docker:dind as base
+ARG TARGETARCH
 
-RUN cargo install cargo-zigbuild
+# Install Rust.
+RUN apk update && apk add --no-cache curl gcc musl-dev
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install cross.
+ENV CROSS_CONTAINER_IN_CONTAINER=true
+RUN cargo install cross --git https://github.com/cross-rs/cross
 
 WORKDIR /build
 COPY . .
-RUN ./mirrord/agent/platform.sh
-RUN rustup target add $(/.platform)
 
+# Stores the platform string in /.platform.
+RUN ./platform.sh
 
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+RUN rustup target add $(cat /.platform)
+
+# Build the binary.
 ENV CARGO_TARGET_DIR=/build
-RUN cargo zigbuild -Z bindeps --target $(/.platform) --release
+RUN cross build --target $(cat /.platform) --release
 
+
+# Now create a slim final layer with only the binary.
 FROM debian:stable-slim
 WORKDIR /app
 COPY --from=base /build/unix-socket-server .
