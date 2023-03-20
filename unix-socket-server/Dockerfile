@@ -7,10 +7,10 @@ ARG TARGETARCH
 WORKDIR /binary
 COPY platform.sh .
 RUN ./platform.sh
-RUN cp target/$(cat ./platform)/release/unix-socket-server .
+RUN cp target/$(cat /.platform)/release/unix-socket-server .
 
 # Now copy only the binary into a new layer.
-FROM --platform=$BUILDPLATFORM debian:stable-slim as base
+FROM --platform=$BUILDPLATFORM debian:stable-slim
 WORKDIR /app
 COPY --from=base /binary/unix-socket-server .
 
