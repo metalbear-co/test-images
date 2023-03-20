@@ -19,6 +19,7 @@ RUN cp target/$(cat /.platform)/release/unix-socket-server .
 FROM --platform=$BUILDPLATFORM debian:stable-slim
 WORKDIR /app
 COPY --from=base /binary/unix-socket-server .
+RUN ls
 
 
 CMD ["./unix-socket-server"]
