@@ -8,7 +8,7 @@ WORKDIR /binary
 COPY platform.sh .
 RUN ./platform.sh
 
-COPY target .
+COPY target target
 RUN pwd
 RUN ls
 RUN ls target
