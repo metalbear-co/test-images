@@ -22,69 +22,69 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Python - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: python
-          file: python/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-pytest:latest
-      - name: Node - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: node
-          file: node/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-node:latest
-      - name: Node UDP Logger - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: node-udp-logger
-          file: node-udp-logger/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-node-udp-logger:latest
-      - name: http-logger - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: http-logger
-          file: http-logger/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-http-logger:latest
-      - name: http-logger - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: http-log-requester
-          file: http-log-requester/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-http-log-requester:latest
-      - name: tcp-echo - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: tcp-echo
-          file: tcp-echo/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-tcp-echo:latest
-      - name: websocket - build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: websocket
-          file: websocket/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/metalbear-co/mirrord-websocket:latest
+#      - name: Python - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: python
+#          file: python/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-pytest:latest
+#      - name: Node - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: node
+#          file: node/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-node:latest
+#      - name: Node UDP Logger - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: node-udp-logger
+#          file: node-udp-logger/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-node-udp-logger:latest
+#      - name: http-logger - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: http-logger
+#          file: http-logger/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-http-logger:latest
+#      - name: http-logger - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: http-log-requester
+#          file: http-log-requester/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-http-log-requester:latest
+#      - name: tcp-echo - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: tcp-echo
+#          file: tcp-echo/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-tcp-echo:latest
+#      - name: websocket - build and push
+#        uses: docker/build-push-action@v3
+#        with:
+#          context: websocket
+#          file: websocket/Dockerfile
+#          platforms: linux/amd64,linux/arm64
+#          push: true
+#          tags: |
+#            ghcr.io/metalbear-co/mirrord-websocket:latest
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: aarch64-unknown-linux-gnu
