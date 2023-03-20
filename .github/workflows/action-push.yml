@@ -85,6 +85,17 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-websocket:latest
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: aarch64-unknown-linux-gnu
+      - name: install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - name: unix-socket-server - compile Rust app
+        run: |
+          cd unix-socket-server
+          cross build --target=x86_64-unknown-linux-gnu --target=aarch64-unknown-linux-gnu --release
       - name: unix-socket-server - build and push
         uses: docker/build-push-action@v3
         with:
