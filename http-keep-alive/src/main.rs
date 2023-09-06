@@ -1,3 +1,6 @@
+//! Program contains an actix HTTP server that replies to `GET` requests on `/` path.
+//!
+//! Intended to check if we can mirror existing sessions.
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_default_env()
