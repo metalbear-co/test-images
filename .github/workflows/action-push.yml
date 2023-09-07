@@ -94,3 +94,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-unix-socket-server:latest
+      - name: http-keep-alive - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: http-keep-alive
+          file: http-keep-alive/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-http-keep-alive:latest
