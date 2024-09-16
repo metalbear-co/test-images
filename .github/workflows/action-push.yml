@@ -103,3 +103,13 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-http-keep-alive:latest
+      - name: sqs-forwarder - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: sqs-forwarder
+          file: sqs-forwarder/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-sqs-forwarder:latest
+
