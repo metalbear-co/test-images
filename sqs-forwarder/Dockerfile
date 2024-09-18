@@ -11,10 +11,8 @@ RUN /build/platform.sh
 
 # Build binary.
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
-#RUN cargo zigbuild -Z bindeps --target $(cat /.platform) --release
-#RUN cp /build/target/$(cat /.platform)/release/sqs-forwarder /sqs-forwarder
-RUN cargo zigbuild -Z bindeps --target $(cat /.platform)
-RUN cp /build/target/$(cat /.platform)/debug/sqs-forwarder /sqs-forwarder
+RUN cargo zigbuild -Z bindeps --target $(cat /.platform) --release
+RUN cp /build/target/$(cat /.platform)/release/sqs-forwarder /sqs-forwarder
 
 # Slim final layer with only the binary.
 FROM debian:stable-slim
