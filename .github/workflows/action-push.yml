@@ -103,6 +103,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-sqs-forwarder:latest
+      # TODO: this is broken.
       - name: unix-socket-server - build and push
         uses: docker/build-push-action@v3
         with:
