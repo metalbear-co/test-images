@@ -5,6 +5,6 @@ COPY go.mod test.txt ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN go build -v -o /app ./...
+RUN go build -v -o /app/go-statfs ./...
 
-CMD ["app"]
+CMD ["/app/go-statfs"]
