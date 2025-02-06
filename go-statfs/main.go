@@ -28,7 +28,7 @@ func main() {
 		"files":   statfs.Files,
 		"flags":   statfs.Flags,
 		"frsize":  statfs.Frsize,
-		"fsid":    []int64{int64(statfs.Fsid.X__val[0]), int64(statfs.Fsid.X__val[1])}, // Convert fsid to list
+		"fsid":    []int32{int32(statfs.Fsid.X__val[0]), int32(statfs.Fsid.X__val[1])},
 		"namelen": statfs.Namelen,
 		"spare":   statfs.Spare,
 		"type":    statfs.Type,
