@@ -10,9 +10,9 @@ import (
 )
 
 func main() {
-	tempFile := "/"
+	rootPath := "/"
 	var statfs syscall.Statfs_t
-	err := syscall.Statfs(tempFile, &statfs)
+	err := syscall.Statfs(rootPath, &statfs)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
