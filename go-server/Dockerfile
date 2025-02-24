@@ -11,8 +11,6 @@ COPY main.go .
 
 RUN CGO_ENABLED=0 go build main.go
 
-COPY certs .
-
 FROM alpine:latest AS run
 
 COPY --from=build /app /app
