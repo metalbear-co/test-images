@@ -8,13 +8,15 @@ const QUEUE_NAME_ENV_VAR1: &str = "SQS_TEST_Q_NAME1";
 /// Name of the environment variable that holds the name of the SQS queue to write to.
 const ECHO_QUEUE_NAME_ENV_VAR1: &str = "SQS_TEST_ECHO_Q_NAME1";
 
-/// Name of the environment variable that holds the name of the second SQS queue to read from.
-const QUEUE_NAME_ENV_VAR2: &str = "SQS_TEST_Q_NAME2";
+/// Name of the environment variable that holds the url of the second SQS queue to read from.
+/// Using URL, not name here, to test that functionality.
+const QUEUE2_URL_ENV_VAR: &str = "SQS_TEST_Q2_URL";
 
 /// Name of the environment variable that holds the name of the SQS queue to write to.
 const ECHO_QUEUE_NAME_ENV_VAR2: &str = "SQS_TEST_ECHO_Q_NAME2";
 
-async fn read_from_queue(
+/// Given Q name - read messages from that queue and echo them to the echo Q.
+async fn read_from_queue_by_name(
     read_q_name: String,
     echo_q_name: String,
     client: Client,
@@ -29,15 +31,23 @@ async fn read_from_queue(
         .queue_url
         .unwrap();
     println!("Successfully fetched queue URL: {read_q_url}");
+    read_from_queue_by_url(read_q_url, echo_q_name, client).await
+}
 
+async fn read_from_queue_by_url(
+    read_q_url: String,
+    echo_q_name: String,
+    client: Client,
+) -> Result<(), anyhow::Error> {
     let echo_q_url = client
         .get_queue_url()
         .queue_name(&echo_q_name)
         .send()
         .await
-        .inspect_err(|err| eprintln!("failed to get URL of queue {read_q_name}: {err:?}"))?
+        .inspect_err(|err| eprintln!("failed to get URL of queue {echo_q_name}: {err:?}"))?
         .queue_url
         .unwrap();
+    println!("Successfully fetched queue URL: {echo_q_url}");
 
     let receive_message_request = client
         .receive_message()
@@ -110,15 +120,17 @@ async fn main() {
     let client = Client::new(&sdk_config);
     let read_q_name = std::env::var(QUEUE_NAME_ENV_VAR1).unwrap();
     let echo_queue_name = std::env::var(ECHO_QUEUE_NAME_ENV_VAR1).unwrap();
-    let q_task_handle = tokio::spawn(read_from_queue(
+    let q_task_handle = tokio::spawn(read_from_queue_by_name(
         read_q_name,
         echo_queue_name,
         client.clone(),
     ));
-    let read_q_name = std::env::var(QUEUE_NAME_ENV_VAR2).unwrap();
+
+    // using URL on second queue to test that too.
+    let read_q_url = std::env::var(QUEUE2_URL_ENV_VAR).unwrap();
     let echo_queue_name = std::env::var(ECHO_QUEUE_NAME_ENV_VAR2).unwrap();
-    let fifo_q_task_handle = tokio::spawn(read_from_queue(
-        read_q_name,
+    let fifo_q_task_handle = tokio::spawn(read_from_queue_by_url(
+        read_q_url,
         echo_queue_name,
         client.clone(),
     ));
