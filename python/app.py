@@ -1,6 +1,6 @@
-from flask import Flask
+from flask import Flask, request
 
-import os
+import os, signal
 
 try:
     HOST = os.environ['HOST']
@@ -36,6 +36,15 @@ def put():
 def delete():
     return "OK - DELETE: Request completed\n"
 
+def signal_handler(signum, frame):
+    signame = signal.Signals(signum).name
+    print(f"{signame} ({signum}) received, shutting down the server")
+
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, signal_handler)
     app.run(host=HOST, port=PORT)

@@ -1,5 +1,6 @@
-var net = require('net');
-var server = net.createServer();
+const net = require('net');
+const server = net.createServer();
+
 server.on('connection', handleConnection);
 server.listen(80, function () {
   console.log('server listening to %j', server.address());
@@ -23,3 +24,7 @@ function handleConnection(conn) {
   }
 }
 
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received, shutting down the server");
+  server.close();
+});

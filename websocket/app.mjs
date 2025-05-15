@@ -61,3 +61,8 @@ wss.on('listening', () => {
 wss.on('close', () => {
     console.log(`> wss close wss`);
 });
+
+process.on("SIGTERM", () => {
+    console.log("SIGTERM signal received, shutting down the server");
+    wss.close();
+});

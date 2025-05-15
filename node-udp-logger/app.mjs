@@ -16,3 +16,8 @@ server.on('listening', () => {
 });
 
 server.bind(31415);
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received, shutting down the server");
+  server.close();
+});
