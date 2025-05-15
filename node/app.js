@@ -18,6 +18,11 @@ app.delete("/", (req, res) => {
   res.send("OK - DELETE: Request completed\n");
   });  
 
-var server = app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+});
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received, shutting down the server");
+  server.close();
 });
