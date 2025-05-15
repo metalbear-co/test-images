@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+_term() { 
+  echo "SIGTERM received, exiting" 
+  exit 0
+}
+
+trap _term SIGTERM
+
 while true
 do
   # http-logger will print "hi-from-deployed-app" to stdout.
