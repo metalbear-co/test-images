@@ -7,8 +7,10 @@ use std::os::unix::ffi::OsStrExt;
 
 use aws_sdk_sqs::types::MessageSystemAttributeName;
 use aws_sdk_sqs::{types::Message, Client};
+use tokio::signal::unix::{signal, SignalKind};
 use tokio::task::JoinSet;
 use tokio::time::{sleep, Duration};
+use tokio_util::sync::CancellationToken;
 
 use crate::config::{ForwardingConfig, SqsQueueEnv};
 
@@ -106,7 +108,7 @@ impl Forwarder {
             })
     }
 
-    async fn run(&self) {
+    async fn run(&self, token: CancellationToken) {
         let receive_message_request = self
             .client
             .receive_message()
@@ -117,7 +119,14 @@ impl Forwarder {
             .queue_url(&self.resolved_input);
 
         loop {
-            let messages = match receive_message_request.clone().send().await {
+            let response = tokio::select! {
+                _ = token.cancelled() => {
+                    break;
+                }
+                response = receive_message_request.clone().send() => response,
+            };
+
+            let messages = match response {
                 Ok(response) => response.messages.unwrap_or_default(),
                 Err(error) => {
                     println!(
@@ -228,13 +237,28 @@ async fn main() {
     let sdk_config = aws_config::load_from_env().await;
     let client = Client::new(&sdk_config);
     let config = config::resolve_config();
+    let mut signal = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+    let token = CancellationToken::new();
 
     let mut tasks = JoinSet::new();
+
+    let guard = token.clone().drop_guard();
+    tasks.spawn(async move {
+        let _guard = guard;
+        signal.recv().await;
+        println!(
+            "[{}:{}] Received SIGTERM, shutting down...",
+            file!(),
+            line!()
+        );
+    });
+
     for config in config {
         let client = client.clone();
+        let token = token.clone();
         tasks.spawn(async move {
             let forwarder = Forwarder::new(client, config).await;
-            forwarder.run().await;
+            forwarder.run(token).await;
         });
     }
 
