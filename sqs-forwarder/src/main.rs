@@ -16,10 +16,13 @@ use crate::config::{ForwardingConfig, SqsQueueEnv};
 
 mod config;
 
+/// Tasks that handles forwarding messages from one SQS queue to another.
 struct Forwarder {
     client: Client,
     config: ForwardingConfig,
+    /// Resolved URL of the input queue.
     resolved_input: String,
+    /// Resolved URL of the output queue.
     resolved_output: String,
 }
 
@@ -108,6 +111,9 @@ impl Forwarder {
             })
     }
 
+    /// Forwards messages between the SQS queues.
+    ///
+    /// Stops reading new messages when the given [`CancellationToken`] is cancelled.
     async fn run(&self, token: CancellationToken) {
         let receive_message_request = self
             .client
@@ -115,6 +121,7 @@ impl Forwarder {
             .message_attribute_names(".*")
             .message_system_attribute_names(MessageSystemAttributeName::All)
             .wait_time_seconds(20)
+            // to make this task more cancellation-friendly
             .max_number_of_messages(1)
             .queue_url(&self.resolved_input);
 
