@@ -1,140 +1,273 @@
+#![deny(unused_crate_dependencies)]
+
+use core::panic;
+use std::collections::HashMap;
+use std::fmt;
+use std::os::unix::ffi::OsStrExt;
+
 use aws_sdk_sqs::types::MessageSystemAttributeName;
-use aws_sdk_sqs::{operation::receive_message::ReceiveMessageOutput, types::Message, Client};
+use aws_sdk_sqs::{types::Message, Client};
+use tokio::signal::unix::{signal, SignalKind};
+use tokio::task::JoinSet;
 use tokio::time::{sleep, Duration};
+use tokio_util::sync::CancellationToken;
 
-/// Name of the environment variable that holds the name of the SQS queue to read from.
-const QUEUE_NAME_ENV_VAR1: &str = "SQS_TEST_Q_NAME1";
+use crate::config::{ForwardingConfig, SqsQueueEnv};
 
-/// Name of the environment variable that holds the name of the SQS queue to write to.
-const ECHO_QUEUE_NAME_ENV_VAR1: &str = "SQS_TEST_ECHO_Q_NAME1";
+mod config;
 
-/// Name of the environment variable that holds the url of the second SQS queue to read from.
-/// Using URL, not name here, to test that functionality.
-const QUEUE2_URL_ENV_VAR: &str = "SQS_TEST_Q2_URL";
-
-/// Name of the environment variable that holds the name of the SQS queue to write to.
-const ECHO_QUEUE_NAME_ENV_VAR2: &str = "SQS_TEST_ECHO_Q_NAME2";
-
-/// Given Q name - read messages from that queue and echo them to the echo Q.
-async fn read_from_queue_by_name(
-    read_q_name: String,
-    echo_q_name: String,
+/// Tasks that handles forwarding messages from one SQS queue to another.
+struct Forwarder {
     client: Client,
-) -> Result<(), anyhow::Error> {
-    println!("Reading from Q: {read_q_name}, writing to echo Q: {echo_q_name}.");
-    let read_q_url = client
-        .get_queue_url()
-        .queue_name(&read_q_name)
-        .send()
-        .await
-        .inspect_err(|err| eprintln!("failed to get URL of queue {read_q_name}: {err:?}"))?
-        .queue_url
-        .unwrap();
-    println!("Successfully fetched queue URL: {read_q_url}");
-    read_from_queue_by_url(read_q_url, echo_q_name, client).await
+    config: ForwardingConfig,
+    /// Resolved URL of the input queue.
+    resolved_input: String,
+    /// Resolved URL of the output queue.
+    resolved_output: String,
 }
 
-async fn read_from_queue_by_url(
-    read_q_url: String,
-    echo_q_name: String,
-    client: Client,
-) -> Result<(), anyhow::Error> {
-    let echo_q_url = client
-        .get_queue_url()
-        .queue_name(&echo_q_name)
-        .send()
-        .await
-        .inspect_err(|err| eprintln!("failed to get URL of queue {echo_q_name}: {err:?}"))?
-        .queue_url
-        .unwrap();
-    println!("Successfully fetched queue URL: {echo_q_url}");
+impl Forwarder {
+    async fn new(client: Client, config: ForwardingConfig) -> Self {
+        let resolved_input = Self::resolve_queue_url(&client, &config.from).await;
+        let resolved_output = Self::resolve_queue_url(&client, &config.to).await;
 
-    let receive_message_request = client
-        .receive_message()
-        .message_attribute_names(".*")
-        .message_system_attribute_names(MessageSystemAttributeName::All)
-        .wait_time_seconds(20)
-        .queue_url(&read_q_url);
-    loop {
-        let res = match receive_message_request.clone().send().await {
-            Ok(res) => res,
-            Err(err) => {
-                println!("ERROR: {err:?}");
-                sleep(Duration::from_secs(3)).await;
-                continue;
+        println!(
+            "[{}:{}] [{config:?}] Resolved queue URLs: {resolved_input} -> {resolved_output}",
+            file!(),
+            line!(),
+        );
+
+        Self {
+            client,
+            config,
+            resolved_input,
+            resolved_output,
+        }
+    }
+
+    async fn resolve_queue_url(client: &Client, queue_env: &SqsQueueEnv) -> String {
+        let SqsQueueEnv {
+            var_name,
+            is_url,
+            json_key,
+        } = queue_env;
+
+        let value = std::env::var_os(var_name).unwrap_or_else(|| {
+            panic!(
+                "[{}:{}] Environment variable `{var_name}` is not set, queue_env=[{queue_env:?}]",
+                file!(),
+                line!()
+            );
+        });
+
+        let value = match json_key {
+            Some(key) => {
+                serde_json::from_slice::<HashMap<&str, &str>>(value.as_bytes()).unwrap_or_else(|error| {
+                    panic!(
+                        "[{}:{}] [{queue_env:?}] Environment variable `{var_name}` is not a valid JSON object: {error}",
+                        file!(),
+                        line!(),
+                    );
+                }).remove(key.as_str()).unwrap_or_else(|| {
+                    panic!(
+                        "[{}:{}] [{queue_env:?}] JSON object read from environment variable `{var_name}` does not contain the key `{key}`",
+                        file!(),
+                        line!()
+                    );
+                })
             }
+            None => value.to_str().unwrap_or_else(|| {
+                panic!(
+                    "[{}:{}] [{queue_env:?}] Environment variable `{var_name}` is not a valid UTF-8 string, env_value=[{value:?}]",
+                    file!(),
+                    line!()
+                )
+            }),
         };
-        if let ReceiveMessageOutput {
-            messages: Some(messages),
-            ..
-        } = res
-        {
-            for Message {
-                body,
-                message_attributes,
-                message_id,
-                receipt_handle,
-                mut attributes,
-                ..
-            } in messages
-            {
-                println!("message_id: {message_id:?}, message_attributes: {message_attributes:?}, body: {body:?}");
-                let group_id = attributes.as_mut().and_then(|attr_map| {
-                    attr_map.remove(&MessageSystemAttributeName::MessageGroupId)
-                });
 
-                let deduplication_id = attributes.and_then(|mut attr_map| {
-                    attr_map.remove(&MessageSystemAttributeName::MessageDeduplicationId)
-                });
+        if *is_url {
+            return value.to_string();
+        }
 
-                println!("forwarding message to {echo_q_name}");
-                if let Err(err) = client
-                    .send_message()
-                    .queue_url(&echo_q_url)
-                    .set_message_attributes(message_attributes)
-                    .set_message_group_id(group_id)
-                    .set_message_deduplication_id(deduplication_id)
-                    .set_message_body(body)
-                    .send()
-                    .await
-                {
-                    println!("failed to forward message to output queue: {err:?}");
-                } else if let Some(handle) = receipt_handle {
-                    client
-                        .delete_message()
-                        .queue_url(&read_q_url)
-                        .receipt_handle(handle)
-                        .send()
-                        .await
-                        .inspect_err(|err| println!("deleting received message failed: {err:?}"))
-                        .ok();
+        client
+            .get_queue_url()
+            .queue_name(value)
+            .send()
+            .await
+            .unwrap_or_else(|error| {
+                panic!(
+                    "[{}:{}] [{queue_env:?}] Failed to resolve URL of SQS queue named `{value}`: {error}",
+                    file!(),
+                    line!(),
+                );
+            })
+            .queue_url
+            .unwrap_or_else(|| {
+                panic!(
+                    "[{}:{}] [{queue_env:?}] Failed to resolve URL of SQS queue named `{value}`: no queue url in the response",
+                    file!(),
+                    line!(),
+                );
+            })
+    }
+
+    /// Forwards messages between the SQS queues.
+    ///
+    /// Stops reading new messages when the given [`CancellationToken`] is cancelled.
+    async fn run(&self, token: CancellationToken) {
+        let receive_message_request = self
+            .client
+            .receive_message()
+            .message_attribute_names(".*")
+            .message_system_attribute_names(MessageSystemAttributeName::All)
+            .wait_time_seconds(20)
+            // to make this task more cancellation-friendly
+            .max_number_of_messages(1)
+            .queue_url(&self.resolved_input);
+
+        loop {
+            let response = tokio::select! {
+                _ = token.cancelled() => {
+                    break;
                 }
+                response = receive_message_request.clone().send() => response,
+            };
+
+            let messages = match response {
+                Ok(response) => response.messages.unwrap_or_default(),
+                Err(error) => {
+                    println!(
+                        "[{}:{}] [{self:?}] Failed to receive messages: {error}",
+                        file!(),
+                        line!()
+                    );
+                    sleep(Duration::from_secs(3)).await;
+                    continue;
+                }
+            };
+
+            for message in messages {
+                println!(
+                    "[{}:{}] [{self:?}] Received message: id=[{:?}], attributes=[{:?}], body=[{:?}]",
+                    file!(),
+                    line!(),
+                    message.message_id,
+                    message.message_attributes,
+                    message.body,
+                );
+
+                self.pass_forward(message).await;
+            }
+        }
+    }
+
+    async fn pass_forward(&self, mut message: Message) {
+        let group_id = message
+            .attributes
+            .as_mut()
+            .and_then(|attr_map| attr_map.remove(&MessageSystemAttributeName::MessageGroupId));
+
+        let deduplication_id = message.attributes.and_then(|mut attr_map| {
+            attr_map.remove(&MessageSystemAttributeName::MessageDeduplicationId)
+        });
+
+        let send_result = self
+            .client
+            .send_message()
+            .queue_url(&self.resolved_output)
+            .set_message_attributes(message.message_attributes)
+            .set_message_group_id(group_id)
+            .set_message_deduplication_id(deduplication_id)
+            .set_message_body(message.body)
+            .send()
+            .await;
+
+        match send_result {
+            Ok(..) => {
+                println!(
+                    "[{}:{}] [{self:?}] Successfully forwarded the message",
+                    file!(),
+                    line!(),
+                );
+            }
+            Err(error) => {
+                panic!(
+                    "[{}:{}] [{self:?}] Failed to forward the message: {error}",
+                    file!(),
+                    line!(),
+                );
+            }
+        }
+
+        let Some(handle) = message.receipt_handle else {
+            return;
+        };
+
+        let delete_result = self
+            .client
+            .delete_message()
+            .queue_url(&self.resolved_input)
+            .receipt_handle(handle)
+            .send()
+            .await;
+        match delete_result {
+            Ok(..) => {
+                println!(
+                    "[{}:{}] [{self:?}] Successfully deleted the message from the input queue.",
+                    file!(),
+                    line!(),
+                );
+            }
+            Err(error) => {
+                panic!(
+                    "[{}:{}] [{self:?}] Failed to delete the message from the input queue: {error}",
+                    file!(),
+                    line!(),
+                );
             }
         }
     }
 }
 
-#[tokio::main]
+impl fmt::Debug for Forwarder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Forwarder")
+            .field("config", &self.config)
+            .field("input", &self.resolved_input)
+            .field("output", &self.resolved_output)
+            .finish()
+    }
+}
+
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let sdk_config = aws_config::load_from_env().await;
     let client = Client::new(&sdk_config);
-    let read_q_name = std::env::var(QUEUE_NAME_ENV_VAR1).unwrap();
-    let echo_queue_name = std::env::var(ECHO_QUEUE_NAME_ENV_VAR1).unwrap();
-    let q_task_handle = tokio::spawn(read_from_queue_by_name(
-        read_q_name,
-        echo_queue_name,
-        client.clone(),
-    ));
+    let config = config::resolve_config();
+    let mut signal = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+    let token = CancellationToken::new();
 
-    // using URL on second queue to test that too.
-    let read_q_url = std::env::var(QUEUE2_URL_ENV_VAR).unwrap();
-    let echo_queue_name = std::env::var(ECHO_QUEUE_NAME_ENV_VAR2).unwrap();
-    let fifo_q_task_handle = tokio::spawn(read_from_queue_by_url(
-        read_q_url,
-        echo_queue_name,
-        client.clone(),
-    ));
-    let (q_res, fifo_res) = tokio::join!(q_task_handle, fifo_q_task_handle);
-    q_res.unwrap().unwrap();
-    fifo_res.unwrap().unwrap();
+    let mut tasks = JoinSet::new();
+
+    let guard = token.clone().drop_guard();
+    tasks.spawn(async move {
+        let _guard = guard;
+        signal.recv().await;
+        println!(
+            "[{}:{}] Received SIGTERM, shutting down...",
+            file!(),
+            line!()
+        );
+    });
+
+    for config in config {
+        let client = client.clone();
+        let token = token.clone();
+        tasks.spawn(async move {
+            let forwarder = Forwarder::new(client, config).await;
+            forwarder.run(token).await;
+        });
+    }
+
+    tasks.join_all().await;
 }
