@@ -113,27 +113,33 @@ impl Forwarder {
 
     /// Forwards messages between the SQS queues.
     ///
+    /// # Cancellation
+    ///
     /// Stops reading new messages when the given [`CancellationToken`] is cancelled.
+    ///
+    /// To prevent triggering SQS message visibility timeout (which would cause a delay in test execution),
+    /// this task never exits in the middle of an SQS request.
+    ///
+    /// Used ReceiveMessage request is configured to read at most one message,
+    /// and wait for no longer than 5 seconds.
+    /// The [`CancellationToken`] is checked only after processing the message (if received any).
     async fn run(&self, token: CancellationToken) {
         let receive_message_request = self
             .client
             .receive_message()
             .message_attribute_names(".*")
             .message_system_attribute_names(MessageSystemAttributeName::All)
-            .wait_time_seconds(20)
             // to make this task more cancellation-friendly
+            .wait_time_seconds(5)
             .max_number_of_messages(1)
             .queue_url(&self.resolved_input);
 
         loop {
-            let response = tokio::select! {
-                _ = token.cancelled() => {
-                    break;
-                }
-                response = receive_message_request.clone().send() => response,
-            };
+            if token.is_cancelled() {
+                break;
+            }
 
-            let messages = match response {
+            let messages = match receive_message_request.clone().send().await {
                 Ok(response) => response.messages.unwrap_or_default(),
                 Err(error) => {
                     println!(
@@ -141,8 +147,16 @@ impl Forwarder {
                         file!(),
                         line!()
                     );
-                    sleep(Duration::from_secs(3)).await;
-                    continue;
+
+                    tokio::select! {
+                        biased;
+                        _ = token.cancelled() => {
+                            break;
+                        }
+                        _ = sleep(Duration::from_secs(3)) => {
+                            continue;
+                        }
+                    }
                 }
             };
 
