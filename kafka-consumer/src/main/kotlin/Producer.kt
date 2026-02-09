@@ -6,7 +6,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
@@ -39,8 +38,7 @@ fun main() =
         createTopics(properties, config.outputTopics.map { it.name })
 
         val producer = KafkaProducer<String, String>(properties)
-        val job = SupervisorJob()
-        val jobScope = CoroutineScope(job)
+        val jobScope = CoroutineScope(SupervisorJob())
         val jobs =
             config.outputTopics.map { topic ->
                 jobScope.launch {
@@ -48,15 +46,10 @@ fun main() =
                 }
             }
 
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                logger.info("Received shutdown signal, cancelling jobs")
-                jobScope.cancel()
-                runBlocking { jobs.joinAll() }
-            },
-        )
-
-        job.join()
+        jobs.joinAll()
+        logger.info("All jobs completed")
+        producer.close()
+        logger.info("Closed producer")
     }
 
 fun createTopics(
@@ -93,9 +86,5 @@ suspend fun produceMessages(
             keyValue("partition", metadata.partition()),
             keyValue("offset", metadata.offset()),
         )
-    }
-
-    withContext(Dispatchers.IO + NonCancellable) {
-        producer.close()
     }
 }

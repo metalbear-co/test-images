@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-producer
+spec:
+  parallelism: 1
+  completions: 1
+  ttlSecondsAfterFinished: 10
+  backoffLimit: 0
+  template:
+    metadata:
+      generateName: kafka-producer-
+      labels:
+        app: kafka-producer
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: producer
+          image: kafka-test-app
+          command: ["java"]
+          args: ["-cp", "app.jar", "com.metalbear.ProducerKt"]
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: KAFKA_bootstrap.servers
+              value: my-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092
+            - name: KAFKA_key.serializer
+              value: org.apache.kafka.common.serialization.StringSerializer
+            - name: KAFKA_value.serializer
+              value: org.apache.kafka.common.serialization.StringSerializer
+            - name: OUTPUT_TOPIC_topic-1
+              value: "[{\"key\": \"1\", \"headers\": {\"header-1\": \"value-1\"}}]"

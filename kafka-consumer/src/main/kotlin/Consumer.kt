@@ -44,8 +44,7 @@ fun main() =
             }
         val properties = Properties().apply { putAll(config.properties) }
 
-        val supervisorJob = SupervisorJob()
-        val jobScope = CoroutineScope(supervisorJob)
+        val jobScope = CoroutineScope(SupervisorJob())
         val job =
             jobScope.launch {
                 if (streams) {
@@ -103,6 +102,7 @@ suspend fun runStandardConsumer(
     withContext(Dispatchers.IO + NonCancellable) {
         consumer.close()
     }
+    logger.info("Closed consumer")
     return
 }
 
@@ -135,5 +135,6 @@ suspend fun runStreamsConsumer(
         withContext(Dispatchers.IO + NonCancellable) {
             kafkaStreams.close()
         }
+        logger.info("Closed streams")
     }
 }
