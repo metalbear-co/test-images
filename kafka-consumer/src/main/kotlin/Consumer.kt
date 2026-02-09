@@ -13,10 +13,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import net.logstash.logback.argument.StructuredArguments.keyValue
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.Serdes
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.StreamsBuilder
+import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.kstream.Consumed
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -48,8 +51,12 @@ fun main() =
         val job =
             jobScope.launch {
                 if (streams) {
+                    properties[StreamsConfig.PROCESSING_GUARANTEE_CONFIG] = StreamsConfig.EXACTLY_ONCE_V2
                     runStreamsConsumer(properties, config.inputTopics)
                 } else {
+                    properties[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java.name
+                    properties[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java.name
+                    properties[ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG] = false
                     runStandardConsumer(properties, config.inputTopics)
                 }
             }
@@ -76,7 +83,7 @@ suspend fun runStandardConsumer(
 
     val consumer =
         withContext(Dispatchers.IO) {
-            KafkaConsumer<String, ByteArray>(properties).apply {
+            KafkaConsumer<String, String>(properties).apply {
                 subscribe(topics)
             }
         }
@@ -88,7 +95,12 @@ suspend fun runStandardConsumer(
             }
 
         records.forEach {
-            logger.info("Received record", keyValue("key", it.key()), keyValue("topic", it.topic()))
+            logger.info(
+                "Received record",
+                keyValue("key", it.key()),
+                keyValue("topic", it.topic()),
+                keyValue("value", it.value()),
+            )
         }
 
         if (records.isEmpty.not()) {
@@ -117,9 +129,14 @@ suspend fun runStreamsConsumer(
 
     val builder = StreamsBuilder()
     topics.forEach { topic ->
-        val stream = builder.stream(topic, Consumed.with(Serdes.String(), Serdes.ByteArray()))
-        stream.foreach { key, _ ->
-            logger.info("Received record", keyValue("key", key), keyValue("topic", topic))
+        val stream = builder.stream(topic, Consumed.with(Serdes.String(), Serdes.String()))
+        stream.foreach { key, value ->
+            logger.info(
+                "Received record",
+                keyValue("key", key),
+                keyValue("topic", topic),
+                keyValue("value", value),
+            )
         }
     }
 

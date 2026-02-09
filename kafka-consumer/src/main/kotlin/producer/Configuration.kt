@@ -39,7 +39,8 @@ data class OutputTopic(
 @Serializable
 data class OutputMessage(
     val key: String,
-    val headers: Map<String, String>,
+    val headers: Map<String, String> = emptyMap(),
+    val value: String = "",
 ) {
     override fun toString(): String = Json.encodeToString(this)
 }

@@ -5,3 +5,4 @@ build
 .dockerignore
 .gitignore
 README.md
+k8s_examples

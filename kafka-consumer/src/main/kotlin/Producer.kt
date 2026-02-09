@@ -16,7 +16,9 @@ import net.logstash.logback.argument.StructuredArguments.keyValue
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.StringSerializer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.Properties
@@ -37,6 +39,8 @@ fun main() =
             }
         createTopics(properties, config.outputTopics.map { it.name })
 
+        properties[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java.name
+        properties[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java.name
         val producer = KafkaProducer<String, String>(properties)
         val jobScope = CoroutineScope(SupervisorJob())
         val jobs =
@@ -58,7 +62,7 @@ fun createTopics(
 ) {
     val client = AdminClient.create(properties)
     val existing = client.listTopics().names().get()
-    val toCreate = topics.filter { it !in existing }.map { NewTopic(it, 1, 1) }
+    val toCreate = (topics.toSet() - existing).map { NewTopic(it, 1, 1) }
     client.createTopics(toCreate).all().get()
 }
 
@@ -73,7 +77,7 @@ suspend fun produceMessages(
             break
         }
 
-        val record = ProducerRecord(topic.name, message.key, "hello")
+        val record = ProducerRecord(topic.name, message.key, message.value)
         message.headers.forEach { record.headers().add(it.key, it.value.toByteArray()) }
 
         val metadata =
