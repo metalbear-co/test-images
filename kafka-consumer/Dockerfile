@@ -9,4 +9,4 @@ FROM gcr.io/distroless/java21-debian12
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-cp", "app.jar", "com.metalbear.ConsumerKt"]

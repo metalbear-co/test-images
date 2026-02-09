@@ -1,60 +1,52 @@
-Simple app that consumes records from multiple Kafka topics,
-using both the standard API and the Kafka Streams API.
+Simple app that consumes or produces records from/to multiple Kafka topics.
 
-The set of input topics is defined at runtime with environment variables.
+Consumption can be done with Kafka Streams API or with the standard KafkaConsumer.
 
-# Configuration
+# Consumer
 
-At startup, the app finds all environment variables with keys following the pattern `INPUT_TOPIC_NAME_{id}`,
-for example `INPUT_TOPIC_NAME_1` or `INPUT_TOPIC_NAME_some-name`.
-The value of each such variable is assumed to be a Kafka topic name,
-and the application consumes records from all topics concurrently.
+Consumer entrypoint is `com.metalbear.ConsumerKt`.
 
-For each topic, the application expects to find a corresponding environment variable `INPUT_TOPIC_CONFIG_{id}`,
-for example `INPUT_TOPIC_CONFIG_1` or `INPUT_TOPIC_CONFIG_some-name`.
-The value of this variable is assumed to be a JSON object containing Kafka topic configuration properties.
+## Configuration
 
-The JSON config has two fields:
-1. `streams` - boolean flag indicating whether to use Kafka Streams API or not
-2. `properties` - map of Kafka client configuration properties
+Consumer is configured like this:
+1. All environment variables prefixed with `KAFKA_` are interpreted as Kafka client properties.
+2. Values of all environment variables prefixed with `INPUT_TOPIC_` are interpreted as input Kafka topics to read from.
+3. Resolved client properties must contain either the `group.id` or `application.id` property.
+If `group.id` is present, the app will use KafkaConsumer API.
+If `application.id` is present, the app will use KafkaStreams API.
 
-For example:
+Example configuration:
+1. `KAFKA_bootrstrap.servers=localhost:9092`
+2. `KAFKA_application.id=my-group`
+3. `KAFKA_processing.guarantee=exactly_once_v2`
+4. `INPUT_TOPIC_1=my-topic-1`
+5. `INPUT_TOPIC_2=my-topic-2`
 
-```json
-{
-  "streams": true,
-  "properties": {
-    "bootstrap.servers": "localhost:9092",
-    "application.id": "my-app"
-  }
-}
-```
+## Consumption
 
-```json
-{
-  "streams": false,
-  "properties": {
-    "bootstrap.servers": "localhost:9092",
-    "group.id": "my-group"
-  }
-}
-```
-
-The application will set some implicit properties:
-1. For Kafka Streams API:
-   * `processing.guarantee=exactly_once_v2`
-2. For standard API:
-   * `enable.auto.commit=false`
-   * `isolation.level=read_committed`
-   * `key.deserializer=org.apache.kafka.common.serialization.StringDeserializer`
-   * `value.deserializer=org.apache.kafka.common.serialization.ByteArrayDeserializer`
-
-# Consumption
-
-Every received record is printed to STDOUT in a JSON log, with the following fields:
-1. `key` - record key
+Consumed records are logged to STDOUT in a JSON format, and discarded.
+Each such log contains following fields:
+1. `message` - `Received record`
 2. `topic` - origin topic
-3. `message` - `Received record`
+3. `key` - record key
 
-These logs can be used to check if the app is consuming correct records.
-The app commits offsets after each successful record consumption.
+# Producer
+
+Produced entrypoint is `com.metalbear.ProducerKt`.
+
+## Configuration
+
+Producer is configured like this:
+1. All environment variables prefixed with `KAFKA_` are interpreted as Kafka client properties.
+2. Values of all environment variables prefixed with `OUTPUT_TOPIC_` are parsed into JSON lists of messages to produce,
+and the remainder of the variable key is interpreted as the topic name.
+
+Example configuration:
+1. `KAFKA_bootstrap.servers=localhost:9092`
+2. `KAFKA_key.serializer=org.apache.kafka.common.serialization.StringSerializer`
+3. `KAFKA_value.serializer=org.apache.kafka.common.serialization.StringSerializer`
+4. `OUTPUT_TOPIC_topic-name-1=[{"key": "key-1", "headers": {"header-1": "value-1"}}]`
+
+## Production
+
+Messages are produced in the given order, with given keys/headers, and bodies hardcoded to `hello.`

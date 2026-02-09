@@ -31,12 +31,12 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.metalbear.MainKt")
+    mainClass.set("com.metalbear.ConsumerKt")
 }
 
 tasks.jar {
     manifest {
-        attributes["Main-Class"] = "com.metalbear.MainKt"
+        attributes["Main-Class"] = "com.metalbear.ConsumerKt"
     }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
