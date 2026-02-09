@@ -59,7 +59,10 @@ fun main() =
         job.join()
     }
 
-fun createTopics(properties: Properties, topics: List<String>) {
+fun createTopics(
+    properties: Properties,
+    topics: List<String>,
+) {
     val client = AdminClient.create(properties)
     val existing = client.listTopics().names().get()
     val toCreate = topics.filter { it !in existing }.map { NewTopic(it, 1, 1) }
