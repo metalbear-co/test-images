@@ -130,3 +130,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-go-server:latest
+      - name: kafka-consumer - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: kafka-consumer
+          file: kafka-consumer/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-kafka-consumer:latest
