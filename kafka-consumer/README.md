@@ -25,8 +25,7 @@ For example:
   "streams": true,
   "properties": {
     "bootstrap.servers": "localhost:9092",
-    "application.id": "my-app",
-    "processing.guarantee": "exactly_once_v2"
+    "application.id": "my-app"
   }
 }
 ```
@@ -36,12 +35,19 @@ For example:
   "streams": false,
   "properties": {
     "bootstrap.servers": "localhost:9092",
-    "group.id": "my-group",
-    "enable.auto.commit": "false",
-    "isolation.level": "read_committed"
+    "group.id": "my-group"
   }
 }
 ```
+
+The application will set some implicit properties:
+1. For Kafka Streams API:
+   * `processing.guarantee=exactly_once_v2`
+2. For standard API:
+   * `enable.auto.commit=false`
+   * `isolation.level=read_committed`
+   * `key.deserializer=org.apache.kafka.common.serialization.StringDeserializer`
+   * `value.deserializer=org.apache.kafka.common.serialization.ByteArrayDeserializer`
 
 # Consumption
 

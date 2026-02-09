@@ -14,10 +14,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import net.logstash.logback.argument.StructuredArguments.keyValue
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.Serdes
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.StreamsBuilder
+import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.kstream.Consumed
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -78,22 +82,35 @@ fun main() =
         job.join()
     }
 
+/**
+ * Consumes records from the given topic, using standard Kafka Consumer API.
+ */
 suspend fun runStandardConsumer(
     topic: String,
     properties: Map<String, String>,
 ) {
     val logger = LoggerFactory.getLogger("standard-consumer-$topic")
 
-    val properties = Properties().apply { putAll(properties) }
+    val properties =
+        Properties().apply {
+            put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java.name)
+            put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer::class.java.name)
+            put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
+            put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed")
+            putAll(properties)
+        }
     val consumer =
-        KafkaConsumer<String, ByteArray>(properties).apply {
-            subscribe(listOf(topic))
+        withContext(Dispatchers.IO) {
+            KafkaConsumer<String, ByteArray>(properties).apply {
+                subscribe(listOf(topic))
+            }
         }
 
     while (currentCoroutineContext().isActive) {
-        val records = withContext(Dispatchers.IO + NonCancellable) {
-            consumer.poll(Duration.ofMillis(100))
-        }
+        val records =
+            withContext(Dispatchers.IO + NonCancellable) {
+                consumer.poll(Duration.ofMillis(100))
+            }
 
         records.forEach {
             logger.info("Received record", keyValue("key", it.key()), keyValue("topic", topic))
@@ -113,6 +130,9 @@ suspend fun runStandardConsumer(
     return
 }
 
+/**
+ * Consumes records from the given topic, using standard Kafka Streams API.
+ */
 suspend fun runStreamsConsumer(
     topic: String,
     properties: Map<String, String>,
@@ -127,7 +147,11 @@ suspend fun runStreamsConsumer(
     }
 
     val topology = builder.build()
-    val properties = Properties().apply { putAll(properties) }
+    val properties =
+        Properties().apply {
+            put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2)
+            putAll(properties)
+        }
     val kafkaStreams = KafkaStreams(topology, properties)
 
     kafkaStreams.start()
