@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import net.logstash.logback.argument.StructuredArguments.keyValue
+import org.apache.kafka.clients.admin.AdminClient
+import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.slf4j.Logger
@@ -34,8 +36,9 @@ fun main() =
             Properties().apply {
                 putAll(config.properties)
             }
-        val producer = KafkaProducer<String, String>(properties)
+        createTopics(properties, config.outputTopics.map { it.name })
 
+        val producer = KafkaProducer<String, String>(properties)
         val job = SupervisorJob()
         val jobScope = CoroutineScope(job)
         val jobs =
@@ -55,6 +58,13 @@ fun main() =
 
         job.join()
     }
+
+fun createTopics(properties: Properties, topics: List<String>) {
+    val client = AdminClient.create(properties)
+    val existing = client.listTopics().names().get()
+    val toCreate = topics.filter { it !in existing }.map { NewTopic(it, 1, 1) }
+    client.createTopics(toCreate).all().get()
+}
 
 suspend fun produceMessages(
     producer: KafkaProducer<String, String>,

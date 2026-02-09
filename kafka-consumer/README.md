@@ -50,3 +50,5 @@ Example configuration:
 ## Production
 
 Messages are produced in the given order, with given keys/headers, and bodies hardcoded to `hello.`
+
+If the topics don't exist, they will be created automatically.
