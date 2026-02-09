@@ -1,0 +1,7 @@
+.gradle
+.idea
+build
+.kotlin
+.dockerignore
+.gitignore
+README.md

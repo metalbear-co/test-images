@@ -91,27 +91,26 @@ suspend fun runStandardConsumer(
         }
 
     while (currentCoroutineContext().isActive) {
-        val records =
-            try {
-                withContext(Dispatchers.IO) {
-                    consumer.poll(Duration.ofMillis(100))
-                }
-            } catch (_: CancellationException) {
-                logger.info("Received shutdown signal, unsubscribing from $topic")
-                withContext(Dispatchers.IO + NonCancellable) {
-                    consumer.close()
-                }
-                return
-            }
+        val records = withContext(Dispatchers.IO + NonCancellable) {
+            consumer.poll(Duration.ofMillis(100))
+        }
 
         records.forEach {
             logger.info("Received record", keyValue("key", it.key()), keyValue("topic", topic))
         }
 
-        withContext(Dispatchers.IO + NonCancellable) {
-            consumer.commitSync()
+        if (records.isEmpty.not()) {
+            withContext(Dispatchers.IO + NonCancellable) {
+                consumer.commitSync()
+            }
         }
     }
+
+    logger.info("Received shutdown signal")
+    withContext(Dispatchers.IO + NonCancellable) {
+        consumer.close()
+    }
+    return
 }
 
 suspend fun runStreamsConsumer(
@@ -136,6 +135,9 @@ suspend fun runStreamsConsumer(
     try {
         awaitCancellation()
     } catch (_: CancellationException) {
-        kafkaStreams.close()
+        logger.info("Received shutdown signal")
+        withContext(Dispatchers.IO + NonCancellable) {
+            kafkaStreams.close()
+        }
     }
 }
