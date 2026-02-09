@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: consumer
-          image: kafka-test-app
+          image: ghcr.io/metalbear-co/mirrord-kafka-consumer:latest
           imagePullPolicy: IfNotPresent
           command: ["java"]
           args: ["-cp", "app.jar", "com.metalbear.ConsumerKt"]

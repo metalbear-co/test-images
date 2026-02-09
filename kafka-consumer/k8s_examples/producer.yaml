@@ -16,7 +16,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: producer
-          image: kafka-test-app
+          image: ghcr.io/metalbear-co/mirrord-kafka-consumer:latest
           command: ["java"]
           args: ["-cp", "app.jar", "com.metalbear.ProducerKt"]
           imagePullPolicy: IfNotPresent
