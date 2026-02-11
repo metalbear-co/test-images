@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-consumer-standard
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kafka-consumer-standard
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer-standard
+    spec:
+      containers:
+        - name: consumer
+          image: ghcr.io/metalbear-co/mirrord-kafka-consumer:latest
+          imagePullPolicy: IfNotPresent
+          command: ["java"]
+          args: ["-cp", "app.jar", "com.metalbear.ConsumerKt"]
+          env:
+            - name: KAFKA_bootstrap.servers
+              value: my-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092
+            - name: KAFKA_group.id
+              value: my-group
+            - name: INPUT_TOPIC_1
+              value: topic-1

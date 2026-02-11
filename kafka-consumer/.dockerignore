@@ -1,0 +1,8 @@
+.gradle
+.idea
+build
+.kotlin
+.dockerignore
+.gitignore
+README.md
+k8s_examples
