@@ -5,6 +5,9 @@ import { ClientProxy, RmqRecordBuilder } from '@nestjs/microservices';
 
 import { firstValueFrom, map, Observable } from 'rxjs';
 
+import type { InventoryProductRequest, InventoryReserveRequest } from '../inventory/inventory.interfaces'
+import type { CreateOrderRequest } from './orders.interfaces'
+
 @Controller('orders')
 export class OrdersController {
   constructor(@Inject('WORKER_SERVICE') private client: ClientProxy) {}
@@ -19,22 +22,22 @@ export class OrdersController {
 
 
   @Post()
-  async createOrder(@Headers() headers: Record<string, string>, @Body() body: any) {
+  async createOrder(@Headers() headers: Record<string, string>, @Body() body: CreateOrderRequest) {
+    const { product, quantity } = body;
+
     const order = {
       id: randomUUID(),
       status: 'CREATED',
-      ...body,
+      product,
+      quantity,
     };
 
-    const inventoryRecord = new RmqRecordBuilder({
-        product: body.product,
-        quantity: body.quantity,
-      })
+    const inventoryRecord = new RmqRecordBuilder<InventoryProductRequest>({ product, quantity })
       .setOptions({ headers })
       .build();
 
     // RPC → Check inventory
-    const available = await firstValueFrom(
+    const available = await firstValueFrom<boolean>(
       this.client.send('inventory.check', inventoryRecord),
     );
 
@@ -42,15 +45,15 @@ export class OrdersController {
       return { message: 'Not enough stock' };
     }
 
-    const inventoryReserveRecord = new RmqRecordBuilder({
+    const inventoryReserveRecord = new RmqRecordBuilder<InventoryReserveRequest>({
         orderId: order.id,
-        product: body.product,
-        quantity: body.quantity,
+        product,
+        quantity,
       })
       .setOptions({ headers })
       .build();
 
-    const reserved = await firstValueFrom(
+    const reserved = await firstValueFrom<boolean>(
       this.client.send('inventory.reserve', inventoryReserveRecord),
     );
 

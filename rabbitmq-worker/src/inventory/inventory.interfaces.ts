@@ -4,3 +4,7 @@ export interface InventoryProductRequest {
 
   quantity: number,
 }
+
+export interface InventoryReserveRequest extends InventoryProductRequest {
+  orderId: string,
+}

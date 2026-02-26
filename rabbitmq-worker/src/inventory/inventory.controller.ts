@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 
-import type { InventoryProductRequest } from './inventory.interfaces';
+import type { InventoryProductRequest, InventoryReserveRequest } from './inventory.interfaces';
 
 @Controller()
 export class InventoryController {
@@ -16,7 +16,7 @@ export class InventoryController {
   }
 
   @MessagePattern('inventory.reserve')
-  reserve(data: InventoryProductRequest & { orderId: string }) {
+  reserve(data: InventoryReserveRequest) {
     if (this.stock[data.product] >= data.quantity) {
       this.stock[data.product] -= data.quantity;
       return true;
