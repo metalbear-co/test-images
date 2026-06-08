@@ -56,6 +56,20 @@ fun main() =
         logger.info("Closed producer")
     }
 
+// Pads the value with a fill character up to the requested byte size. The fill characters are
+// ASCII, so character count equals byte count. The original value is kept as a prefix so a test
+// can reconstruct the exact expected payload. Returns the value unchanged when no size is given or
+// it is already long enough.
+fun inflateValue(
+    value: String,
+    valueSize: Int?,
+): String {
+    if (valueSize == null || valueSize <= value.length) {
+        return value
+    }
+    return value + "a".repeat(valueSize - value.length)
+}
+
 fun createTopics(
     properties: Properties,
     topics: List<String>,
@@ -77,7 +91,8 @@ suspend fun produceMessages(
             break
         }
 
-        val record = ProducerRecord(topic.name, message.key, message.value)
+        val value = inflateValue(message.value, message.valueSize)
+        val record = ProducerRecord(topic.name, message.key, value)
         message.headers.forEach { record.headers().add(it.key, it.value.toByteArray()) }
 
         val metadata =

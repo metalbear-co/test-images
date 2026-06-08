@@ -41,6 +41,10 @@ data class OutputMessage(
     val key: String,
     val headers: Map<String, String> = emptyMap(),
     val value: String = "",
+    // Target size in bytes for the produced value. Used to test large payloads that cannot be
+    // passed literally through an env var, since a single env var string is capped at 128 KiB.
+    // When set, the value is repeated/padded up to this many bytes before being sent.
+    val valueSize: Int? = null,
 ) {
     override fun toString(): String = Json.encodeToString(this)
 }
