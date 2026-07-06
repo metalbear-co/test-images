@@ -2,9 +2,19 @@ const net = require('net');
 const server = net.createServer();
 
 server.on('connection', handleConnection);
-server.listen(80, function () {
+
+// Bind address is configurable via the `HOST` env var (matching the python test image).
+// When unset, we let Node pick the default (all interfaces). Setting it to the pod IP lets us
+// test the case where an app listens on the pod's external IP instead of loopback.
+const host = process.env.HOST;
+const onListening = function () {
   console.log('server listening to %j', server.address());
-});
+};
+if (host) {
+  server.listen(80, host, onListening);
+} else {
+  server.listen(80, onListening);
+}
 function handleConnection(conn) {
   var remoteAddress = conn.remoteAddress + ':' + conn.remotePort;
   console.log('new client connection from %s', remoteAddress);
