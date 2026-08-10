@@ -5,11 +5,11 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use rdkafka::{
-    ClientConfig, Offset, TopicPartitionList,
     consumer::{BaseConsumer, CommitMode, Consumer, StreamConsumer},
     message::{Headers, Message, OwnedMessage},
+    ClientConfig, Offset, TopicPartitionList,
 };
 use serde::Serialize;
 use tokio::{
@@ -146,10 +146,18 @@ impl App {
             }
         }
 
-        self.commit_with_retry(&messages)
-            .await
-            .context("failed to commit consumed offsets")?;
-        Ok(messages.iter().map(Self::to_consumed).collect())
+        match self.commit_with_retry(&messages).await {
+            Ok(()) => Ok(messages.iter().map(Self::to_consumed).collect()),
+            // The batch is still uncommitted, so hand it back to the front of the buffer instead of
+            // dropping it. A later request then re-reads the same records rather than committing an
+            // offset past them, which would leave them consumed by nobody.
+            Err(error) => {
+                for message in messages.into_iter().rev() {
+                    self.buffer.push_front(message);
+                }
+                Err(error).context("failed to commit consumed offsets")
+            }
+        }
     }
 
     /// Reads a deterministic snapshot without touching the target consumer group's committed

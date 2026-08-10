@@ -4,10 +4,10 @@ use std::{net::SocketAddr, time::Duration};
 
 use anyhow::Context;
 use axum::{
-    Json, Router,
     extract::{Query, State},
     http::StatusCode,
     routing::{get, post},
+    Json, Router,
 };
 use serde::Deserialize;
 
