@@ -1,0 +1,30 @@
+[package]
+name = "kafka-controllable-consumer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+axum = { version = "0.8", features = ["json", "http1", "tokio", "query"] }
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = [
+  "macros",
+  "rt-multi-thread",
+  "sync",
+  "net",
+  "time",
+  "signal",
+] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# The MetalBear fork carries fixes the upstream crate does not have. `cmake-build` makes
+# cross-compilation work and `ssl-vendored` is required for SASL.
+[dependencies.rdkafka]
+git = "https://github.com/metalbear-co/rust-rdkafka.git"
+rev = "4e84de5dcb5d3cbe2b7036b21f016581445e445c"
+features = ["cmake-build", "ssl-vendored"]
