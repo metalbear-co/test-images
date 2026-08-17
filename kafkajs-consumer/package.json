@@ -1,0 +1,10 @@
+{
+  "name": "kafkajs-consumer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kafka test consumer built on KafkaJS, mirroring the kafka-consumer image's env contract and log format",
+  "main": "consumer.js",
+  "dependencies": {
+    "kafkajs": "2.2.0"
+  }
+}
