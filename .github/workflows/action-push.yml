@@ -148,3 +148,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/metalbear-co/mirrord-kafka-controllable-consumer:latest
+      - name: kafkajs-consumer - build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: kafkajs-consumer
+          file: kafkajs-consumer/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/metalbear-co/mirrord-kafkajs-consumer:latest
